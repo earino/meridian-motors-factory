@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Meridian Motors — 3D Factory Line</title>
+  <meta name="description" content="A real-time 3D visualization of a car factory: raw materials in, finished cars out." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23070a12'/%3E%3Cpath d='M5 25V13l6 4v-4l6 4v-4l6 4v8H5z' fill='%23ffb454'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./css/style.css" />
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.min.js" } }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div class="overlay">
+    <header class="card brand-card">
+      <div class="brand-row">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="currentColor"><path d="M2 27V11l7 4.5v-4.5l7 4.5v-4.5l7 4.5V27H2z"/><rect x="24.6" y="5.5" width="3.6" height="9.5" rx="1.2"/></svg>
+        </span>
+        <div>
+          <h1>Meridian Motors</h1>
+          <p>Line 1 · Assembly Visualizer</p>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="stat-label">Cars produced</span><span id="statCars" class="stat-value accent">0</span></div>
+        <div class="stat"><span class="stat-label">On line</span><span id="statOnLine" class="stat-value">0</span></div>
+        <div class="stat"><span class="stat-label">Speed</span><span id="statSpeed" class="stat-value">1×</span></div>
+      </div>
+    </header>
+
+    <aside class="card legend-card" aria-label="Line stages">
+      <p class="legend-title">Line stages</p>
+      <ul>
+        <li data-chip="raw"><span class="dot"></span>Raw materials</li>
+        <li data-chip="weld"><span class="dot"></span>Frame &amp; weld</li>
+        <li data-chip="paint"><span class="dot"></span>Paint shop</li>
+        <li data-chip="assembly"><span class="dot"></span>Assembly</li>
+        <li data-chip="check"><span class="dot"></span>Quality check</li>
+        <li data-chip="delivery"><span class="dot"></span>Delivery</li>
+      </ul>
+    </aside>
+
+    <div id="toasts" aria-live="polite"></div>
+    <div id="pausedPill">Paused</div>
+
+    <div class="controls card" role="toolbar" aria-label="Line controls">
+      <button id="pauseBtn" aria-label="Pause or resume the line" title="Pause / resume">
+        <svg id="iconPause" viewBox="0 0 24 24" fill="currentColor"><rect x="6.5" y="5" width="4" height="14" rx="1.4"/><rect x="13.5" y="5" width="4" height="14" rx="1.4"/></svg>
+        <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M8 5.4v13.2c0 .9 1 1.5 1.8 1L20 13a1.2 1.2 0 0 0 0-2L9.8 4.4A1.2 1.2 0 0 0 8 5.4z"/></svg>
+      </button>
+      <div class="segmented" role="group" aria-label="Line speed">
+        <button data-speed="0.5" title="Half speed">0.5×</button>
+        <button data-speed="1" class="active" title="Normal speed">1×</button>
+        <button data-speed="2" title="Double speed">2×</button>
+      </div>
+      <button id="resetViewBtn" aria-label="Reset camera view" title="Reset camera view">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1"/><polyline points="21 3.5 21 9 15.5 9"/></svg>
+      </button>
+    </div>
+
+    <p class="hint">Drag to orbit · Scroll to zoom · Double-click to reset view</p>
+  </div>
+
+  <div id="loader">
+    <div class="spinner" aria-hidden="true"></div>
+    <p id="loaderText">Warming up the line…</p>
+  </div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
