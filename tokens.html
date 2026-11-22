@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Session Telemetry — Meridian Motors Factory</title>
+<style>
+  :root {
+    --bg: #070a12;
+    --card: rgba(255,255,255,0.035);
+    --border: rgba(255,255,255,0.09);
+    --text: #e8ecf4;
+    --muted: #93a1b5;
+    --amber: #ffb454;
+    --cyan: #6ee7ff;
+    --purple: #c792ea;
+    --green: #7dffa8;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+    padding: 28px 20px 48px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+  .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em; color: var(--amber); text-transform: uppercase; }
+  a.back { font-family: var(--mono); font-size: 12px; color: var(--muted); text-decoration: none; border: 1px solid var(--border); padding: 6px 12px; border-radius: 999px; transition: color .2s, border-color .2s; }
+  a.back:hover { color: var(--text); border-color: rgba(255,180,84,0.5); }
+  h1 { font-size: clamp(28px, 4vw, 44px); letter-spacing: -0.02em; line-height: 1.08; margin-bottom: 10px; }
+  .subtitle { color: var(--muted); font-size: 14px; max-width: 720px; }
+  .subtitle b { color: #c9d4e6; font-weight: 600; }
+  .hero { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 26px 0 12px; }
+  @media (max-width: 860px) { .hero { grid-template-columns: repeat(2, 1fr); } }
+  .stat { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px 18px 14px; backdrop-filter: blur(8px); }
+  .stat .label { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .stat .value { font-family: var(--mono); font-size: clamp(22px, 2.6vw, 32px); font-weight: 700; letter-spacing: -0.02em; color: #fff; font-variant-numeric: tabular-nums; }
+  .stat .caption { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+  .strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 22px; }
+  @media (max-width: 860px) { .strip { grid-template-columns: repeat(2, 1fr); } }
+  .mini { background: rgba(255,180,84,0.05); border: 1px solid rgba(255,180,84,0.18); border-radius: 12px; padding: 10px 14px; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .mini .k { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; }
+  .mini .v { font-family: var(--mono); font-size: 15px; color: var(--amber); font-weight: 600; white-space: nowrap; }
+  .grid { display: grid; grid-template-columns: 1.55fr 1fr; gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 960px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px 18px 14px; backdrop-filter: blur(8px); min-width: 0; }
+  .card h2 { font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: #c9d4e6; margin-bottom: 4px; font-weight: 700; }
+  .card .hint { font-size: 11.5px; color: var(--muted); margin-bottom: 12px; }
+  .chart-wrap { width: 100%; overflow: hidden; }
+  svg text { fill: #93a1b5; font-family: var(--mono); }
+  .rows { display: flex; flex-direction: column; gap: 12px; margin-top: 6px; }
+  .row { display: grid; grid-template-columns: 86px 1fr auto; align-items: center; gap: 10px; font-size: 12.5px; }
+  .row .name { color: #c9d4e6; letter-spacing: 0.04em; }
+  .bar-track { height: 14px; background: rgba(255,255,255,0.05); border-radius: 7px; overflow: hidden; position: relative; }
+  .bar-fill { height: 100%; border-radius: 7px; min-width: 3px; transition: width 1s cubic-bezier(.2,.8,.2,1); }
+  .row .num { font-family: var(--mono); color: #fff; font-size: 12.5px; white-space: nowrap; text-align: right; }
+  .row .pct { display: block; font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .turns-card { margin-bottom: 14px; }
+  .turns-strip { width: 100%; overflow: hidden; }
+  .caption-note { font-size: 11.5px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
+  footer { border-top: 1px solid var(--border); padding-top: 16px; margin-top: 8px; font-size: 11.5px; color: var(--muted); display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+  footer .mono { font-family: var(--mono); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">Session Telemetry · pi / inkling</span>
+    <a class="back" href="index.html">← Back to factory line</a>
+  </header>
+
+  <h1>How the work ran</h1>
+  <p class="subtitle">Every turn, every token — captured from this session's log. Model: <b>inkling</b> (thinkingmachines/inkling-2-mini) · Captured <span id="captured">—</span>. Input tokens are context re-sends; output is what was actually generated.</p>
+
+  <div class="hero">
+    <div class="stat"><div class="label">Total tokens</div><div class="value" id="v-total">0</div><div class="caption">input + output, all turns</div></div>
+    <div class="stat"><div class="label">Wall clock</div><div class="value" id="v-span">0 min</div><div class="caption" id="v-span-sub">—</div></div>
+    <div class="stat"><div class="label">Turns</div><div class="value" id="v-turns">0</div><div class="caption">assistant turns with usage data</div></div>
+    <div class="stat"><div class="label">Tool calls</div><div class="value" id="v-tools">0</div><div class="caption" id="v-tools-sub">—</div></div>
+  </div>
+
+  <div class="strip">
+    <div class="mini"><span class="k">avg input / turn</span><span class="v" id="m-in">—</span></div>
+    <div class="mini"><span class="k">avg output / turn</span><span class="v" id="m-out">—</span></div>
+    <div class="mini"><span class="k">peak turn total</span><span class="v" id="m-peak">—</span></div>
+    <div class="mini"><span class="k">input : output</span><span class="v" id="m-ratio">—</span></div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Input tokens per minute</h2>
+      <p class="hint">Context re-sends dominate — each turn re-reads the growing conversation. Aggregated to 5-minute bins.</p>
+      <div class="chart-wrap"><svg id="areaChart" viewBox="0 0 1000 340" width="100%" role="img" aria-label="Input tokens per minute area chart"></svg></div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:14px; min-width:0;">
+      <div class="card">
+        <h2>Composition</h2>
+        <p class="hint">Share of total tokens. Reasoning is counted within output.</p>
+        <div class="rows" id="compositionRows"></div>
+      </div>
+      <div class="card">
+        <h2>Tool calls</h2>
+        <p class="hint">By tool type, across all turns.</p>
+        <div class="rows" id="toolRows"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card turns-card">
+    <h2>Every turn</h2>
+    <p class="hint" id="turnsHint">One bar per assistant turn, in chronological order. Height = total tokens in that turn. Amber = peak turn.</p>
+    <div class="turns-strip"><svg id="turnsStrip" viewBox="0 0 1000 190" width="100%" role="img" aria-label="Per-turn token bars"></svg></div>
+    <p class="caption-note" id="turnsNote">—</p>
+  </div>
+
+  <footer>
+    <span>Data source: pi session log (assistant messages with usage). Zero-usage turns excluded from charts.</span>
+    <span class="mono" id="footMeta">—</span>
+  </footer>
+</div>
+
+<script>
+const DATA = {"first":"2026-11-21T21:54:34.228000+00:00","last":"2026-11-22T11:25:26.029000+00:00","spanMin":810.86335,"totals":{"input":16981471,"output":825033,"reasoning":528940,"total":17806504},"turns":234,"toolCalls":{"bash":222,"write":9,"read":2},"bins5":[{"input":30554,"output":5363,"reasoning":4870,"turns":4},{"input":31055,"output":11126,"reasoning":10306,"turns":2},{"input":24509,"output":3180,"reasoning":272,"turns":1},{"input":60712,"output":5686,"reasoning":2042,"turns":2},{"input":33431,"output":14901,"reasoning":4974,"turns":1},{"input":48363,"output":398,"reasoning":105,"turns":1},{"input":49295,"output":9247,"reasoning":0,"turns":1},{"input":183659,"output":9729,"reasoning":5268,"turns":3},{"input":354492,"output":3836,"reasoning":533,"turns":5},{"input":297999,"output":4197,"reasoning":2187,"turns":4},{"input":324362,"output":6913,"reasoning":2183,"turns":4},{"input":544097,"output":5622,"reasoning":766,"turns":6},{"input":862644,"output":3848,"reasoning":1951,"turns":9},{"input":395926,"output":1631,"reasoning":479,"turns":4},{"input":416694,"output":2571,"reasoning":1700,"turns":4},{"input":110184,"output":3639,"reasoning":2145,"turns":1},{"input":0,"output":0,"reasoning":0,"turns":0},{"input":33165,"output":4579,"reasoning":3272,"turns":1},{"input":37826,"output":4217,"reasoning":2773,"turns":1},{"input":88610,"output":8435,"reasoning":5614,"turns":2},{"input":50784,"output":4217,"reasoning":2773,"turns":1},{"input":114457,"output":8298,"reasoning":5546,"turns":2},{"input":63608,"output":4149,"reasoning":2773,"turns":1},{"input":139975,"output":8298,"reasoning":5546,"turns":2},{"input":76367,"output":4149,"reasoning":2773,"turns":1},{"input":80620,"output":4149,"reasoning":2773,"turns":1},{"input":173999,"output":8298,"reasoning":5546,"turns":2},{"input":93379,"output":4149,"reasoning":2773,"turns":1},{"input":97632,"output":4149,"reasoning":2773,"turns":1},{"input":101885,"output":4149,"reasoning":2773,"turns":1},{"input":106138,"output":4149,"reasoning":2773,"turns":1},{"input":110391,"output":4149,"reasoning":2773,"turns":1},{"input":0,"output":0,"reasoning":0,"turns":0},{"input":34308,"output":4149,"reasoning":2773,"turns":1},{"input":81375,"output":8298,"reasoning":5546,"turns":2},{"input":98387,"output":8298,"reasoning":5546,"turns":2},{"input":55573,"output":4149,"reasoning":2773,"turns":1},{"input":123905,"output":8298,"reasoning":5546,"turns":2},{"input":68332,"output":4149,"reasoning":2773,"turns":1},{"input":72585,"output":4149,"reasoning":2773,"turns":1},{"input":157929,"output":8298,"reasoning":5546,"turns":2},{"input":85344,"output":4149,"reasoning":2773,"turns":1},{"input":89597,"output":4149,"reasoning":2773,"turns":1},{"input":191953,"output":8298,"reasoning":5546,"turns":2},{"input":102356,"output":4149,"reasoning":2773,"turns":1},{"input":106609,"output":4149,"reasoning":2773,"turns":1},{"input":110862,"output":4149,"reasoning":2773,"turns":1},{"input":0,"output":0,"reasoning":0,"turns":0},{"input":33942,"output":4149,"reasoning":2773,"turns":1},{"input":80643,"output":8298,"reasoning":5546,"turns":2},{"input":97655,"output":8298,"reasoning":5546,"turns":2},{"input":55207,"output":4149,"reasoning":2773,"turns":1},{"input":123173,"output":8298,"reasoning":5546,"turns":2},{"input":67966,"output":4149,"reasoning":2773,"turns":1},{"input":148691,"output":8298,"reasoning":5546,"turns":2},{"input":80725,"output":4149,"reasoning":2773,"turns":1},{"input":84978,"output":4149,"reasoning":2773,"turns":1},{"input":89231,"output":4149,"reasoning":2773,"turns":1},{"input":191221,"output":8298,"reasoning":5546,"turns":2},{"input":101990,"output":4149,"reasoning":2773,"turns":1},{"input":106243,"output":4149,"reasoning":2773,"turns":1},{"input":110496,"output":4149,"reasoning":2773,"turns":1},{"input":0,"output":0,"reasoning":0,"turns":0},{"input":35413,"output":4149,"reasoning":2773,"turns":1},{"input":83585,"output":8298,"reasoning":5546,"turns":2},{"input":48172,"output":4149,"reasoning":2773,"turns":1},{"input":109103,"output":8298,"reasoning":5546,"turns":2},{"input":126115,"output":8298,"reasoning":5546,"turns":2},{"input":69437,"output":4149,"reasoning":2773,"turns":1},{"input":73690,"output":4149,"reasoning":2773,"turns":1},{"input":160139,"output":8298,"reasoning":5546,"turns":2},{"input":86449,"output":4149,"reasoning":2773,"turns":1},{"input":90702,"output":4149,"reasoning":2773,"turns":1},{"input":194163,"output":8298,"reasoning":5546,"turns":2},{"input":103461,"output":4149,"reasoning":2773,"turns":1},{"input":107714,"output":4149,"reasoning":2773,"turns":1},{"input":0,"output":0,"reasoning":0,"turns":0},{"input":0,"output":0,"reasoning":0,"turns":0},{"input":77881,"output":8298,"reasoning":5546,"turns":2},{"input":94893,"output":8298,"reasoning":5546,"turns":2},{"input":53826,"output":4149,"reasoning":2773,"turns":1},{"input":120411,"output":8298,"reasoning":5546,"turns":2},{"input":66585,"output":4149,"reasoning":2773,"turns":1},{"input":145929,"output":8298,"reasoning":5546,"turns":2},{"input":79344,"output":4149,"reasoning":2773,"turns":1},{"input":83597,"output":4149,"reasoning":2773,"turns":1},{"input":179953,"output":8298,"reasoning":5546,"turns":2},{"input":96356,"output":4149,"reasoning":2773,"turns":1},{"input":100609,"output":4149,"reasoning":2773,"turns":1},{"input":104862,"output":4149,"reasoning":2773,"turns":1},{"input":109115,"output":4149,"reasoning":2773,"turns":1},{"input":0,"output":0,"reasoning":0,"turns":0},{"input":38121,"output":4149,"reasoning":2773,"turns":1},{"input":42374,"output":4149,"reasoning":2773,"turns":1},{"input":97507,"output":8298,"reasoning":5546,"turns":2},{"input":55133,"output":4149,"reasoning":2773,"turns":1},{"input":123025,"output":8298,"reasoning":5546,"turns":2},{"input":67892,"output":4149,"reasoning":2773,"turns":1},{"input":72145,"output":4149,"reasoning":2773,"turns":1},{"input":157049,"output":8298,"reasoning":5546,"turns":2},{"input":84904,"output":4149,"reasoning":2773,"turns":1},{"input":89157,"output":4149,"reasoning":2773,"turns":1},{"input":93410,"output":4149,"reasoning":2773,"turns":1},{"input":199579,"output":8298,"reasoning":5546,"turns":2},{"input":106169,"output":4149,"reasoning":2773,"turns":1},{"input":110422,"output":4149,"reasoning":2773,"turns":1},{"input":0,"output":0,"reasoning":0,"turns":0},{"input":0,"output":0,"reasoning":0,"turns":0},{"input":39622,"output":4149,"reasoning":2773,"turns":1},{"input":43875,"output":4149,"reasoning":2773,"turns":1},{"input":100509,"output":8298,"reasoning":5546,"turns":2},{"input":56634,"output":4149,"reasoning":2773,"turns":1},{"input":126027,"output":8298,"reasoning":5546,"turns":2},{"input":69393,"output":4149,"reasoning":2773,"turns":1},{"input":151545,"output":8298,"reasoning":5546,"turns":2},{"input":82152,"output":4149,"reasoning":2773,"turns":1},{"input":86405,"output":4149,"reasoning":2773,"turns":1},{"input":90658,"output":4149,"reasoning":2773,"turns":1},{"input":194075,"output":8298,"reasoning":5546,"turns":2},{"input":103417,"output":4149,"reasoning":2773,"turns":1},{"input":107670,"output":4149,"reasoning":2773,"turns":1},{"input":0,"output":0,"reasoning":0,"turns":0},{"input":0,"output":0,"reasoning":0,"turns":0},{"input":74281,"output":8298,"reasoning":5546,"turns":2},{"input":43520,"output":4149,"reasoning":2773,"turns":1},{"input":99799,"output":8298,"reasoning":5546,"turns":2},{"input":56279,"output":4149,"reasoning":2773,"turns":1},{"input":125317,"output":8298,"reasoning":5546,"turns":2},{"input":69038,"output":4149,"reasoning":2773,"turns":1},{"input":150835,"output":8298,"reasoning":5546,"turns":2},{"input":81797,"output":4149,"reasoning":2773,"turns":1},{"input":86050,"output":4149,"reasoning":2773,"turns":1},{"input":90303,"output":4149,"reasoning":2773,"turns":1},{"input":193365,"output":8298,"reasoning":5546,"turns":2},{"input":103062,"output":4149,"reasoning":2773,"turns":1},{"input":107315,"output":4149,"reasoning":2773,"turns":1},{"input":111568,"output":4149,"reasoning":2773,"turns":1},{"input":0,"output":0,"reasoning":0,"turns":0},{"input":35435,"output":4149,"reasoning":2773,"turns":1},{"input":39688,"output":4149,"reasoning":2773,"turns":1},{"input":92135,"output":8298,"reasoning":5546,"turns":2},{"input":52447,"output":4149,"reasoning":2773,"turns":1},{"input":117653,"output":8298,"reasoning":5546,"turns":2},{"input":65206,"output":4149,"reasoning":2773,"turns":1},{"input":143171,"output":7281,"reasoning":5546,"turns":2},{"input":157260,"output":5284,"reasoning":4236,"turns":2},{"input":82626,"output":1421,"reasoning":1097,"turns":1},{"input":84068,"output":10339,"reasoning":2183,"turns":1},{"input":94448,"output":3179,"reasoning":2776,"turns":1},{"input":97792,"output":3179,"reasoning":2776,"turns":1},{"input":205612,"output":6350,"reasoning":5546,"turns":2},{"input":107816,"output":3175,"reasoning":2773,"turns":1},{"input":111156,"output":3175,"reasoning":2773,"turns":1},{"input":0,"output":0,"reasoning":0,"turns":0},{"input":0,"output":0,"reasoning":0,"turns":0},{"input":39986,"output":10353,"reasoning":2183,"turns":1},{"input":103848,"output":5767,"reasoning":5125,"turns":2},{"input":117128,"output":6090,"reasoning":5549,"turns":2},{"input":130864,"output":3907,"reasoning":3330,"turns":2},{"input":217532,"output":6746,"reasoning":5738,"turns":3},{"input":157582,"output":6292,"reasoning":2968,"turns":2},{"input":169390,"output":3033,"reasoning":2185,"turns":2},{"input":87638,"output":3777,"reasoning":1993,"turns":1}],"turnList":[{"ts":"2026-11-21T21:54:54.434Z","offsetSec":20.206,"input":5573,"output":163,"reasoning":93,"total":5736,"tools":{"bash":1}},{"ts":"2026-11-21T21:55:40.874Z","offsetSec":66.646,"input":5945,"output":1529,"reasoning":1367,"total":7474,"tools":{"bash":1}},{"ts":"2026-11-21T21:57:34.286Z","offsetSec":180.058,"input":7613,"output":3519,"reasoning":3352,"total":11132,"tools":{"bash":1}},{"ts":"2026-11-21T21:57:56.912Z","offsetSec":202.684,"input":11423,"output":152,"reasoning":58,"total":11575,"tools":{"bash":1}},{"ts":"2026-11-21T22:00:23.240Z","offsetSec":349.012,"input":13345,"output":4344,"reasoning":4173,"total":17689,"tools":{"bash":1}},{"ts":"2026-11-21T22:04:14.542Z","offsetSec":580.314,"input":17710,"output":6782,"reasoning":6133,"total":24492,"tools":{"write":1}},{"ts":"2026-11-21T22:06:29.329Z","offsetSec":715.101,"input":24509,"output":3180,"reasoning":272,"total":27689,"tools":{"write":1}},{"ts":"2026-11-21T22:09:35.760Z","offsetSec":901.532,"input":27715,"output":5265,"reasoning":1763,"total":32980,"tools":{"write":1}},{"ts":"2026-11-21T22:10:19.864Z","offsetSec":945.636,"input":32997,"output":421,"reasoning":279,"total":33418,"tools":{"bash":1}},{"ts":"2026-11-21T22:18:41.286Z","offsetSec":1447.058,"input":33431,"output":14901,"reasoning":4974,"total":48332,"tools":{"write":1}},{"ts":"2026-11-21T22:20:44.838Z","offsetSec":1570.61,"input":48363,"output":398,"reasoning":105,"total":48761,"tools":{"bash":1}},{"ts":"2026-11-21T22:26:19.426Z","offsetSec":1905.198,"input":49295,"output":9247,"reasoning":0,"total":58542,"tools":{"write":1}},{"ts":"2026-11-21T22:29:51.368Z","offsetSec":2117.14,"input":58552,"output":3566,"reasoning":3166,"total":62118,"tools":{"bash":1}},{"ts":"2026-11-21T22:30:51.263Z","offsetSec":2177.035,"input":62135,"output":712,"reasoning":0,"total":62847,"tools":{"bash":1}},{"ts":"2026-11-21T22:34:15.988Z","offsetSec":2381.76,"input":62972,"output":5451,"reasoning":2102,"total":68423,"tools":{"write":1}},{"ts":"2026-11-21T22:36:27.500Z","offsetSec":2513.272,"input":68461,"output":2031,"reasoning":87,"total":70492,"tools":{"write":1}},{"ts":"2026-11-21T22:37:18.903Z","offsetSec":2564.675,"input":70510,"output":816,"reasoning":134,"total":71326,"tools":{"bash":1}},{"ts":"2026-11-21T22:37:31.570Z","offsetSec":2577.342,"input":71377,"output":85,"reasoning":0,"total":71462,"tools":{"bash":1}},{"ts":"2026-11-21T22:38:51.393Z","offsetSec":2657.165,"input":71850,"output":403,"reasoning":146,"total":72253,"tools":{"bash":1}},{"ts":"2026-11-21T22:39:31.130Z","offsetSec":2696.902,"input":72294,"output":501,"reasoning":166,"total":72795,"tools":{"bash":1}},{"ts":"2026-11-21T22:39:46.727Z","offsetSec":2712.499,"input":72908,"output":119,"reasoning":48,"total":73027,"tools":{"read":1}},{"ts":"2026-11-21T22:41:29.024Z","offsetSec":2814.796,"input":73055,"output":2689,"reasoning":1943,"total":75744,"tools":{"bash":1}},{"ts":"2026-11-21T22:42:08.433Z","offsetSec":2854.205,"input":75798,"output":274,"reasoning":196,"total":76072,"tools":{"bash":1}},{"ts":"2026-11-21T22:43:00.654Z","offsetSec":2906.426,"input":76238,"output":1115,"reasoning":0,"total":77353,"tools":{"bash":1}},{"ts":"2026-11-21T22:45:28.671Z","offsetSec":3054.443,"input":77521,"output":3399,"reasoning":2183,"total":80920,"tools":{"bash":1}},{"ts":"2026-11-21T22:46:37.883Z","offsetSec":3123.655,"input":81124,"output":709,"reasoning":0,"total":81833,"tools":{"bash":1}},{"ts":"2026-11-21T22:47:29.089Z","offsetSec":3174.861,"input":81988,"output":1241,"reasoning":0,"total":83229,"tools":{"bash":1}},{"ts":"2026-11-21T22:48:51.540Z","offsetSec":3257.312,"input":83729,"output":1564,"reasoning":0,"total":85293,"tools":{"bash":1}},{"ts":"2026-11-21T22:50:39.327Z","offsetSec":3365.099,"input":86009,"output":2440,"reasoning":0,"total":88449,"tools":{"bash":1}},{"ts":"2026-11-21T22:52:20.974Z","offsetSec":3466.746,"input":88997,"output":1332,"reasoning":0,"total":90329,"tools":{"bash":1}},{"ts":"2026-11-21T22:53:40.572Z","offsetSec":3546.344,"input":90831,"output":1462,"reasoning":694,"total":92293,"tools":{"bash":1}},{"ts":"2026-11-21T22:54:08.318Z","offsetSec":3574.09,"input":92525,"output":169,"reasoning":0,"total":92694,"tools":{"bash":1}},{"ts":"2026-11-21T22:54:13.279Z","offsetSec":3579.051,"input":92821,"output":75,"reasoning":0,"total":92896,"tools":{"bash":1}},{"ts":"2026-11-21T22:54:20.278Z","offsetSec":3586.05,"input":92914,"output":144,"reasoning":72,"total":93058,"tools":{"bash":1}},{"ts":"2026-11-21T22:54:47.820Z","offsetSec":3613.592,"input":93908,"output":362,"reasoning":0,"total":94270,"tools":{"bash":1}},{"ts":"2026-11-21T22:55:03.066Z","offsetSec":3628.838,"input":94321,"output":336,"reasoning":229,"total":94657,"tools":{"bash":1}},{"ts":"2026-11-21T22:55:40.397Z","offsetSec":3666.169,"input":94874,"output":721,"reasoning":599,"total":95595,"tools":{"bash":1}},{"ts":"2026-11-21T22:56:04.974Z","offsetSec":3690.746,"input":95666,"output":175,"reasoning":0,"total":95841,"tools":{"bash":1}},{"ts":"2026-11-21T22:56:17.369Z","offsetSec":3703.141,"input":95993,"output":224,"reasoning":0,"total":96217,"tools":{"bash":1}},{"ts":"2026-11-21T22:56:59.001Z","offsetSec":3744.773,"input":96253,"output":250,"reasoning":0,"total":96503,"tools":{"bash":1}},{"ts":"2026-11-21T22:57:27.259Z","offsetSec":3773.031,"input":96566,"output":606,"reasoning":62,"total":97172,"tools":{"bash":1}},{"ts":"2026-11-21T22:58:04.177Z","offsetSec":3809.949,"input":97317,"output":406,"reasoning":299,"total":97723,"tools":{"bash":1}},{"ts":"2026-11-21T22:58:41.177Z","offsetSec":3846.949,"input":97746,"output":768,"reasoning":762,"total":98514,"tools":{}},{"ts":"2026-11-21T23:02:13.207Z","offsetSec":4058.979,"input":97776,"output":412,"reasoning":339,"total":98188,"tools":{"bash":1}},{"ts":"2026-11-21T23:02:30.302Z","offsetSec":4076.074,"input":98533,"output":188,"reasoning":84,"total":98721,"tools":{"bash":1}},{"ts":"2026-11-21T23:02:48.527Z","offsetSec":4094.299,"input":99497,"output":150,"reasoning":56,"total":99647,"tools":{"bash":1}},{"ts":"2026-11-21T23:03:32.712Z","offsetSec":4138.484,"input":100120,"output":881,"reasoning":0,"total":101001,"tools":{"bash":1}},{"ts":"2026-11-21T23:04:37.430Z","offsetSec":4203.202,"input":101129,"output":1492,"reasoning":1007,"total":102621,"tools":{}},{"ts":"2026-11-21T23:05:52.928Z","offsetSec":4278.7,"input":102665,"output":629,"reasoning":517,"total":103294,"tools":{"read":1}},{"ts":"2026-11-21T23:06:49.774Z","offsetSec":4335.546,"input":105786,"output":310,"reasoning":176,"total":106096,"tools":{"bash":1}},{"ts":"2026-11-21T23:07:14.264Z","offsetSec":4360.036,"input":107114,"output":140,"reasoning":0,"total":107254,"tools":{"bash":1}},{"ts":"2026-11-21T23:10:52.103Z","offsetSec":4577.875,"input":110184,"output":3639,"reasoning":2145,"total":113823,"tools":{"bash":1}},{"ts":"2026-11-21T23:24:10.402Z","offsetSec":5376.174,"input":33165,"output":4579,"reasoning":3272,"total":37744,"tools":{"bash":1}},{"ts":"2026-11-21T23:27:14.655Z","offsetSec":5560.427,"input":37826,"output":4217,"reasoning":2773,"total":42043,"tools":{"bash":1}},{"ts":"2026-11-21T23:30:18.478Z","offsetSec":5744.25,"input":42144,"output":4218,"reasoning":2841,"total":46362,"tools":{"bash":1}},{"ts":"2026-11-21T23:33:23.964Z","offsetSec":5929.736,"input":46466,"output":4217,"reasoning":2773,"total":50683,"tools":{"bash":1}},{"ts":"2026-11-21T23:36:36.434Z","offsetSec":6122.206,"input":50784,"output":4217,"reasoning":2773,"total":55001,"tools":{"bash":1}},{"ts":"2026-11-21T23:39:51.767Z","offsetSec":6317.539,"input":55102,"output":4149,"reasoning":2773,"total":59251,"tools":{"bash":1}},{"ts":"2026-11-21T23:43:12.006Z","offsetSec":6517.778,"input":59355,"output":4149,"reasoning":2773,"total":63504,"tools":{"bash":1}},{"ts":"2026-11-21T23:46:35.257Z","offsetSec":6721.029,"input":63608,"output":4149,"reasoning":2773,"total":67757,"tools":{"bash":1}},{"ts":"2026-11-21T23:50:04.184Z","offsetSec":6929.956,"input":67861,"output":4149,"reasoning":2773,"total":72010,"tools":{"bash":1}},{"ts":"2026-11-21T23:53:38.146Z","offsetSec":7143.918,"input":72114,"output":4149,"reasoning":2773,"total":76263,"tools":{"bash":1}},{"ts":"2026-11-21T23:57:26.445Z","offsetSec":7372.217,"input":76367,"output":4149,"reasoning":2773,"total":80516,"tools":{"bash":1}},{"ts":"2026-11-22T00:01:23.350Z","offsetSec":7609.122,"input":80620,"output":4149,"reasoning":2773,"total":84769,"tools":{"bash":1}},{"ts":"2026-11-22T00:05:14.575Z","offsetSec":7840.347,"input":84873,"output":4149,"reasoning":2773,"total":89022,"tools":{"bash":1}},{"ts":"2026-11-22T00:09:29.638Z","offsetSec":8095.41,"input":89126,"output":4149,"reasoning":2773,"total":93275,"tools":{"bash":1}},{"ts":"2026-11-22T00:13:51.108Z","offsetSec":8356.88,"input":93379,"output":4149,"reasoning":2773,"total":97528,"tools":{"bash":1}},{"ts":"2026-11-22T00:17:57.437Z","offsetSec":8603.209,"input":97632,"output":4149,"reasoning":2773,"total":101781,"tools":{"bash":1}},{"ts":"2026-11-22T00:22:18.029Z","offsetSec":8863.801,"input":101885,"output":4149,"reasoning":2773,"total":106034,"tools":{"bash":1}},{"ts":"2026-11-22T00:26:33.360Z","offsetSec":9119.132,"input":106138,"output":4149,"reasoning":2773,"total":110287,"tools":{"bash":1}},{"ts":"2026-11-22T00:30:58.833Z","offsetSec":9384.605,"input":110391,"output":4149,"reasoning":2773,"total":114540,"tools":{"bash":1}},{"ts":"2026-11-22T00:42:10.587Z","offsetSec":10056.359,"input":34308,"output":4149,"reasoning":2773,"total":38457,"tools":{"bash":1}},{"ts":"2026-11-22T00:45:06.341Z","offsetSec":10232.113,"input":38561,"output":4149,"reasoning":2773,"total":42710,"tools":{"bash":1}},{"ts":"2026-11-22T00:48:04.959Z","offsetSec":10410.731,"input":42814,"output":4149,"reasoning":2773,"total":46963,"tools":{"bash":1}},{"ts":"2026-11-22T00:51:16.386Z","offsetSec":10602.158,"input":47067,"output":4149,"reasoning":2773,"total":51216,"tools":{"bash":1}},{"ts":"2026-11-22T00:54:31.053Z","offsetSec":10796.825,"input":51320,"output":4149,"reasoning":2773,"total":55469,"tools":{"bash":1}},{"ts":"2026-11-22T00:57:48.932Z","offsetSec":10994.704,"input":55573,"output":4149,"reasoning":2773,"total":59722,"tools":{"bash":1}},{"ts":"2026-11-22T01:01:07.778Z","offsetSec":11193.55,"input":59826,"output":4149,"reasoning":2773,"total":63975,"tools":{"bash":1}},{"ts":"2026-11-22T01:04:31.654Z","offsetSec":11397.426,"input":64079,"output":4149,"reasoning":2773,"total":68228,"tools":{"bash":1}},{"ts":"2026-11-22T01:07:58.684Z","offsetSec":11604.456,"input":68332,"output":4149,"reasoning":2773,"total":72481,"tools":{"bash":1}},{"ts":"2026-11-22T01:11:30.221Z","offsetSec":11815.993,"input":72585,"output":4149,"reasoning":2773,"total":76734,"tools":{"bash":1}},{"ts":"2026-11-22T01:15:06.499Z","offsetSec":12032.271,"input":76838,"output":4149,"reasoning":2773,"total":80987,"tools":{"bash":1}},{"ts":"2026-11-22T01:18:49.296Z","offsetSec":12255.068,"input":81091,"output":4149,"reasoning":2773,"total":85240,"tools":{"bash":1}},{"ts":"2026-11-22T01:22:34.416Z","offsetSec":12480.188,"input":85344,"output":4149,"reasoning":2773,"total":89493,"tools":{"bash":1}},{"ts":"2026-11-22T01:26:24.657Z","offsetSec":12710.429,"input":89597,"output":4149,"reasoning":2773,"total":93746,"tools":{"bash":1}},{"ts":"2026-11-22T01:30:19.962Z","offsetSec":12945.734,"input":93850,"output":4149,"reasoning":2773,"total":97999,"tools":{"bash":1}},{"ts":"2026-11-22T01:34:20.687Z","offsetSec":13186.459,"input":98103,"output":4149,"reasoning":2773,"total":102252,"tools":{"bash":1}},{"ts":"2026-11-22T01:38:26.375Z","offsetSec":13432.147,"input":102356,"output":4149,"reasoning":2773,"total":106505,"tools":{"bash":1}},{"ts":"2026-11-22T01:42:37.621Z","offsetSec":13683.393,"input":106609,"output":4149,"reasoning":2773,"total":110758,"tools":{"bash":1}},{"ts":"2026-11-22T01:46:54.581Z","offsetSec":13940.353,"input":110862,"output":4149,"reasoning":2773,"total":115011,"tools":{"bash":1}},{"ts":"2026-11-22T01:57:18.619Z","offsetSec":14564.391,"input":33942,"output":4149,"reasoning":2773,"total":38091,"tools":{"bash":1}},{"ts":"2026-11-22T02:00:10.126Z","offsetSec":14735.898,"input":38195,"output":4149,"reasoning":2773,"total":42344,"tools":{"bash":1}},{"ts":"2026-11-22T02:03:07.802Z","offsetSec":14913.574,"input":42448,"output":4149,"reasoning":2773,"total":46597,"tools":{"bash":1}},{"ts":"2026-11-22T02:06:08.898Z","offsetSec":15094.67,"input":46701,"output":4149,"reasoning":2773,"total":50850,"tools":{"bash":1}},{"ts":"2026-11-22T02:09:15.150Z","offsetSec":15280.922,"input":50954,"output":4149,"reasoning":2773,"total":55103,"tools":{"bash":1}},{"ts":"2026-11-22T02:12:26.141Z","offsetSec":15471.913,"input":55207,"output":4149,"reasoning":2773,"total":59356,"tools":{"bash":1}},{"ts":"2026-11-22T02:15:41.986Z","offsetSec":15667.758,"input":59460,"output":4149,"reasoning":2773,"total":63609,"tools":{"bash":1}},{"ts":"2026-11-22T02:19:02.215Z","offsetSec":15867.987,"input":63713,"output":4149,"reasoning":2773,"total":67862,"tools":{"bash":1}},{"ts":"2026-11-22T02:22:27.003Z","offsetSec":16072.775,"input":67966,"output":4149,"reasoning":2773,"total":72115,"tools":{"bash":1}},{"ts":"2026-11-22T02:25:56.512Z","offsetSec":16282.284,"input":72219,"output":4149,"reasoning":2773,"total":76368,"tools":{"bash":1}},{"ts":"2026-11-22T02:29:30.886Z","offsetSec":16496.658,"input":76472,"output":4149,"reasoning":2773,"total":80621,"tools":{"bash":1}},{"ts":"2026-11-22T02:33:10.131Z","offsetSec":16715.903,"input":80725,"output":4149,"reasoning":2773,"total":84874,"tools":{"bash":1}},{"ts":"2026-11-22T02:36:54.532Z","offsetSec":16940.304,"input":84978,"output":4149,"reasoning":2773,"total":89127,"tools":{"bash":1}},{"ts":"2026-11-22T02:40:43.518Z","offsetSec":17169.29,"input":89231,"output":4149,"reasoning":2773,"total":93380,"tools":{"bash":1}},{"ts":"2026-11-22T02:44:37.749Z","offsetSec":17403.521,"input":93484,"output":4149,"reasoning":2773,"total":97633,"tools":{"bash":1}},{"ts":"2026-11-22T02:48:37.019Z","offsetSec":17642.791,"input":97737,"output":4149,"reasoning":2773,"total":101886,"tools":{"bash":1}},{"ts":"2026-11-22T02:52:41.938Z","offsetSec":17887.71,"input":101990,"output":4149,"reasoning":2773,"total":106139,"tools":{"bash":1}},{"ts":"2026-11-22T02:56:52.219Z","offsetSec":18137.991,"input":106243,"output":4149,"reasoning":2773,"total":110392,"tools":{"bash":1}},{"ts":"2026-11-22T03:01:08.066Z","offsetSec":18393.838,"input":110496,"output":4149,"reasoning":2773,"total":114645,"tools":{"bash":1}},{"ts":"2026-11-22T03:12:34.496Z","offsetSec":19080.268,"input":35413,"output":4149,"reasoning":2773,"total":39562,"tools":{"bash":1}},{"ts":"2026-11-22T03:15:28.987Z","offsetSec":19254.759,"input":39666,"output":4149,"reasoning":2773,"total":43815,"tools":{"bash":1}},{"ts":"2026-11-22T03:18:27.166Z","offsetSec":19432.938,"input":43919,"output":4149,"reasoning":2773,"total":48068,"tools":{"bash":1}},{"ts":"2026-11-22T03:21:29.265Z","offsetSec":19615.037,"input":48172,"output":4149,"reasoning":2773,"total":52321,"tools":{"bash":1}},{"ts":"2026-11-22T03:24:36.619Z","offsetSec":19802.391,"input":52425,"output":4149,"reasoning":2773,"total":56574,"tools":{"bash":1}},{"ts":"2026-11-22T03:27:49.199Z","offsetSec":19994.971,"input":56678,"output":4149,"reasoning":2773,"total":60827,"tools":{"bash":1}},{"ts":"2026-11-22T03:31:07.010Z","offsetSec":20192.782,"input":60931,"output":4149,"reasoning":2773,"total":65080,"tools":{"bash":1}},{"ts":"2026-11-22T03:34:28.830Z","offsetSec":20394.602,"input":65184,"output":4149,"reasoning":2773,"total":69333,"tools":{"bash":1}},{"ts":"2026-11-22T03:37:55.027Z","offsetSec":20600.799,"input":69437,"output":4149,"reasoning":2773,"total":73586,"tools":{"bash":1}},{"ts":"2026-11-22T03:41:26.033Z","offsetSec":20811.805,"input":73690,"output":4149,"reasoning":2773,"total":77839,"tools":{"bash":1}},{"ts":"2026-11-22T03:45:01.703Z","offsetSec":21027.475,"input":77943,"output":4149,"reasoning":2773,"total":82092,"tools":{"bash":1}},{"ts":"2026-11-22T03:48:42.821Z","offsetSec":21248.593,"input":82196,"output":4149,"reasoning":2773,"total":86345,"tools":{"bash":1}},{"ts":"2026-11-22T03:52:28.839Z","offsetSec":21474.611,"input":86449,"output":4149,"reasoning":2773,"total":90598,"tools":{"bash":1}},{"ts":"2026-11-22T03:56:20.045Z","offsetSec":21705.817,"input":90702,"output":4149,"reasoning":2773,"total":94851,"tools":{"bash":1}},{"ts":"2026-11-22T04:00:16.275Z","offsetSec":21942.047,"input":94955,"output":4149,"reasoning":2773,"total":99104,"tools":{"bash":1}},{"ts":"2026-11-22T04:04:17.907Z","offsetSec":22183.679,"input":99208,"output":4149,"reasoning":2773,"total":103357,"tools":{"bash":1}},{"ts":"2026-11-22T04:08:25.015Z","offsetSec":22430.787,"input":103461,"output":4149,"reasoning":2773,"total":107610,"tools":{"bash":1}},{"ts":"2026-11-22T04:12:37.958Z","offsetSec":22683.73,"input":107714,"output":4149,"reasoning":2773,"total":111863,"tools":{"bash":1}},{"ts":"2026-11-22T04:24:54.754Z","offsetSec":23420.526,"input":36814,"output":4149,"reasoning":2773,"total":40963,"tools":{"bash":1}},{"ts":"2026-11-22T04:27:50.053Z","offsetSec":23595.825,"input":41067,"output":4149,"reasoning":2773,"total":45216,"tools":{"bash":1}},{"ts":"2026-11-22T04:30:50.769Z","offsetSec":23776.541,"input":45320,"output":4149,"reasoning":2773,"total":49469,"tools":{"bash":1}},{"ts":"2026-11-22T04:33:55.853Z","offsetSec":23961.625,"input":49573,"output":4149,"reasoning":2773,"total":53722,"tools":{"bash":1}},{"ts":"2026-11-22T04:37:05.576Z","offsetSec":24151.348,"input":53826,"output":4149,"reasoning":2773,"total":57975,"tools":{"bash":1}},{"ts":"2026-11-22T04:40:20.161Z","offsetSec":24345.933,"input":58079,"output":4149,"reasoning":2773,"total":62228,"tools":{"bash":1}},{"ts":"2026-11-22T04:43:39.479Z","offsetSec":24545.251,"input":62332,"output":4149,"reasoning":2773,"total":66481,"tools":{"bash":1}},{"ts":"2026-11-22T04:47:03.291Z","offsetSec":24749.063,"input":66585,"output":4149,"reasoning":2773,"total":70734,"tools":{"bash":1}},{"ts":"2026-11-22T04:50:31.479Z","offsetSec":24957.251,"input":70838,"output":4149,"reasoning":2773,"total":74987,"tools":{"bash":1}},{"ts":"2026-11-22T04:54:04.542Z","offsetSec":25170.314,"input":75091,"output":4149,"reasoning":2773,"total":79240,"tools":{"bash":1}},{"ts":"2026-11-22T04:57:42.732Z","offsetSec":25388.504,"input":79344,"output":4149,"reasoning":2773,"total":83493,"tools":{"bash":1}},{"ts":"2026-11-22T05:01:26.151Z","offsetSec":25611.923,"input":83597,"output":4149,"reasoning":2773,"total":87746,"tools":{"bash":1}},{"ts":"2026-11-22T05:05:14.540Z","offsetSec":25840.312,"input":87850,"output":4149,"reasoning":2773,"total":91999,"tools":{"bash":1}},{"ts":"2026-11-22T05:09:07.302Z","offsetSec":26073.074,"input":92103,"output":4149,"reasoning":2773,"total":96252,"tools":{"bash":1}},{"ts":"2026-11-22T05:13:05.968Z","offsetSec":26311.74,"input":96356,"output":4149,"reasoning":2773,"total":100505,"tools":{"bash":1}},{"ts":"2026-11-22T05:17:09.762Z","offsetSec":26555.534,"input":100609,"output":4149,"reasoning":2773,"total":104758,"tools":{"bash":1}},{"ts":"2026-11-22T05:21:18.860Z","offsetSec":26804.632,"input":104862,"output":4149,"reasoning":2773,"total":109011,"tools":{"bash":1}},{"ts":"2026-11-22T05:25:33.633Z","offsetSec":27059.405,"input":109115,"output":4149,"reasoning":2773,"total":113264,"tools":{"bash":1}},{"ts":"2026-11-22T05:39:19.733Z","offsetSec":27885.505,"input":38121,"output":4149,"reasoning":2773,"total":42270,"tools":{"bash":1}},{"ts":"2026-11-22T05:42:26.675Z","offsetSec":28072.447,"input":42374,"output":4149,"reasoning":2773,"total":46523,"tools":{"bash":1}},{"ts":"2026-11-22T05:45:37.748Z","offsetSec":28263.52,"input":46627,"output":4149,"reasoning":2773,"total":50776,"tools":{"bash":1}},{"ts":"2026-11-22T05:48:53.371Z","offsetSec":28459.143,"input":50880,"output":4149,"reasoning":2773,"total":55029,"tools":{"bash":1}},{"ts":"2026-11-22T05:52:15.433Z","offsetSec":28661.205,"input":55133,"output":4149,"reasoning":2773,"total":59282,"tools":{"bash":1}},{"ts":"2026-11-22T05:55:41.549Z","offsetSec":28867.321,"input":59386,"output":4149,"reasoning":2773,"total":63535,"tools":{"bash":1}},{"ts":"2026-11-22T05:59:11.852Z","offsetSec":29077.624,"input":63639,"output":4149,"reasoning":2773,"total":67788,"tools":{"bash":1}},{"ts":"2026-11-22T06:02:46.591Z","offsetSec":29292.363,"input":67892,"output":4149,"reasoning":2773,"total":72041,"tools":{"bash":1}},{"ts":"2026-11-22T06:06:26.068Z","offsetSec":29511.84,"input":72145,"output":4149,"reasoning":2773,"total":76294,"tools":{"bash":1}},{"ts":"2026-11-22T06:10:10.783Z","offsetSec":29736.555,"input":76398,"output":4149,"reasoning":2773,"total":80547,"tools":{"bash":1}},{"ts":"2026-11-22T06:14:00.294Z","offsetSec":29966.066,"input":80651,"output":4149,"reasoning":2773,"total":84800,"tools":{"bash":1}},{"ts":"2026-11-22T06:17:54.635Z","offsetSec":30200.407,"input":84904,"output":4149,"reasoning":2773,"total":89053,"tools":{"bash":1}},{"ts":"2026-11-22T06:21:53.131Z","offsetSec":30438.903,"input":89157,"output":4149,"reasoning":2773,"total":93306,"tools":{"bash":1}},{"ts":"2026-11-22T06:25:56.823Z","offsetSec":30682.595,"input":93410,"output":4149,"reasoning":2773,"total":97559,"tools":{"bash":1}},{"ts":"2026-11-22T06:30:06.029Z","offsetSec":30931.801,"input":97663,"output":4149,"reasoning":2773,"total":101812,"tools":{"bash":1}},{"ts":"2026-11-22T06:34:20.532Z","offsetSec":31186.304,"input":101916,"output":4149,"reasoning":2773,"total":106065,"tools":{"bash":1}},{"ts":"2026-11-22T06:38:40.152Z","offsetSec":31445.924,"input":106169,"output":4149,"reasoning":2773,"total":110318,"tools":{"bash":1}},{"ts":"2026-11-22T06:43:05.290Z","offsetSec":31711.062,"input":110422,"output":4149,"reasoning":2773,"total":114571,"tools":{"bash":1}},{"ts":"2026-11-22T06:58:20.944Z","offsetSec":32626.716,"input":39622,"output":4149,"reasoning":2773,"total":43771,"tools":{"bash":1}},{"ts":"2026-11-22T07:01:28.562Z","offsetSec":32814.334,"input":43875,"output":4149,"reasoning":2773,"total":48024,"tools":{"bash":1}},{"ts":"2026-11-22T07:04:41.338Z","offsetSec":33007.11,"input":48128,"output":4149,"reasoning":2773,"total":52277,"tools":{"bash":1}},{"ts":"2026-11-22T07:07:59.363Z","offsetSec":33205.135,"input":52381,"output":4149,"reasoning":2773,"total":56530,"tools":{"bash":1}},{"ts":"2026-11-22T07:11:22.121Z","offsetSec":33407.893,"input":56634,"output":4149,"reasoning":2773,"total":60783,"tools":{"bash":1}},{"ts":"2026-11-22T07:14:49.318Z","offsetSec":33615.09,"input":60887,"output":4149,"reasoning":2773,"total":65036,"tools":{"bash":1}},{"ts":"2026-11-22T07:18:21.429Z","offsetSec":33827.201,"input":65140,"output":4149,"reasoning":2773,"total":69289,"tools":{"bash":1}},{"ts":"2026-11-22T07:21:57.562Z","offsetSec":34043.334,"input":69393,"output":4149,"reasoning":2773,"total":73542,"tools":{"bash":1}},{"ts":"2026-11-22T07:25:38.767Z","offsetSec":34264.539,"input":73646,"output":4149,"reasoning":2773,"total":77795,"tools":{"bash":1}},{"ts":"2026-11-22T07:29:24.387Z","offsetSec":34490.159,"input":77899,"output":4149,"reasoning":2773,"total":82048,"tools":{"bash":1}},{"ts":"2026-11-22T07:33:15.801Z","offsetSec":34721.573,"input":82152,"output":4149,"reasoning":2773,"total":86301,"tools":{"bash":1}},{"ts":"2026-11-22T07:37:11.978Z","offsetSec":34957.75,"input":86405,"output":4149,"reasoning":2773,"total":90554,"tools":{"bash":1}},{"ts":"2026-11-22T07:41:13.004Z","offsetSec":35198.776,"input":90658,"output":4149,"reasoning":2773,"total":94807,"tools":{"bash":1}},{"ts":"2026-11-22T07:45:18.798Z","offsetSec":35444.57,"input":94911,"output":4149,"reasoning":2773,"total":99060,"tools":{"bash":1}},{"ts":"2026-11-22T07:49:30.018Z","offsetSec":35695.79,"input":99164,"output":4149,"reasoning":2773,"total":103313,"tools":{"bash":1}},{"ts":"2026-11-22T07:53:46.105Z","offsetSec":35951.877,"input":103417,"output":4149,"reasoning":2773,"total":107566,"tools":{"bash":1}},{"ts":"2026-11-22T07:58:08.479Z","offsetSec":36214.251,"input":107670,"output":4149,"reasoning":2773,"total":111819,"tools":{"bash":1}},{"ts":"2026-11-22T08:10:15.781Z","offsetSec":36941.553,"input":35014,"output":4149,"reasoning":2773,"total":39163,"tools":{"bash":1}},{"ts":"2026-11-22T08:13:19.119Z","offsetSec":37124.891,"input":39267,"output":4149,"reasoning":2773,"total":43416,"tools":{"bash":1}},{"ts":"2026-11-22T08:16:26.976Z","offsetSec":37312.748,"input":43520,"output":4149,"reasoning":2773,"total":47669,"tools":{"bash":1}},{"ts":"2026-11-22T08:19:39.107Z","offsetSec":37504.879,"input":47773,"output":4149,"reasoning":2773,"total":51922,"tools":{"bash":1}},{"ts":"2026-11-22T08:22:56.942Z","offsetSec":37702.714,"input":52026,"output":4149,"reasoning":2773,"total":56175,"tools":{"bash":1}},{"ts":"2026-11-22T08:26:19.344Z","offsetSec":37905.116,"input":56279,"output":4149,"reasoning":2773,"total":60428,"tools":{"bash":1}},{"ts":"2026-11-22T08:29:46.834Z","offsetSec":38112.606,"input":60532,"output":4149,"reasoning":2773,"total":64681,"tools":{"bash":1}},{"ts":"2026-11-22T08:33:18.438Z","offsetSec":38324.21,"input":64785,"output":4149,"reasoning":2773,"total":68934,"tools":{"bash":1}},{"ts":"2026-11-22T08:36:53.779Z","offsetSec":38539.551,"input":69038,"output":4149,"reasoning":2773,"total":73187,"tools":{"bash":1}},{"ts":"2026-11-22T08:40:33.721Z","offsetSec":38759.493,"input":73291,"output":4149,"reasoning":2773,"total":77440,"tools":{"bash":1}},{"ts":"2026-11-22T08:44:18.781Z","offsetSec":38984.553,"input":77544,"output":4149,"reasoning":2773,"total":81693,"tools":{"bash":1}},{"ts":"2026-11-22T08:48:08.729Z","offsetSec":39214.501,"input":81797,"output":4149,"reasoning":2773,"total":85946,"tools":{"bash":1}},{"ts":"2026-11-22T08:52:03.558Z","offsetSec":39449.33,"input":86050,"output":4149,"reasoning":2773,"total":90199,"tools":{"bash":1}},{"ts":"2026-11-22T08:56:03.120Z","offsetSec":39688.892,"input":90303,"output":4149,"reasoning":2773,"total":94452,"tools":{"bash":1}},{"ts":"2026-11-22T09:00:07.506Z","offsetSec":39933.278,"input":94556,"output":4149,"reasoning":2773,"total":98705,"tools":{"bash":1}},{"ts":"2026-11-22T09:04:17.247Z","offsetSec":40183.019,"input":98809,"output":4149,"reasoning":2773,"total":102958,"tools":{"bash":1}},{"ts":"2026-11-22T09:08:32.319Z","offsetSec":40438.091,"input":103062,"output":4149,"reasoning":2773,"total":107211,"tools":{"bash":1}},{"ts":"2026-11-22T09:12:53.412Z","offsetSec":40699.184,"input":107315,"output":4149,"reasoning":2773,"total":111464,"tools":{"bash":1}},{"ts":"2026-11-22T09:17:19.846Z","offsetSec":40965.618,"input":111568,"output":4149,"reasoning":2773,"total":115717,"tools":{"bash":1}},{"ts":"2026-11-22T09:29:31.657Z","offsetSec":41697.429,"input":35435,"output":4149,"reasoning":2773,"total":39584,"tools":{"bash":1}},{"ts":"2026-11-22T09:32:34.516Z","offsetSec":41880.288,"input":39688,"output":4149,"reasoning":2773,"total":43837,"tools":{"bash":1}},{"ts":"2026-11-22T09:35:42.046Z","offsetSec":42067.818,"input":43941,"output":4149,"reasoning":2773,"total":48090,"tools":{"bash":1}},{"ts":"2026-11-22T09:38:54.393Z","offsetSec":42260.165,"input":48194,"output":4149,"reasoning":2773,"total":52343,"tools":{"bash":1}},{"ts":"2026-11-22T09:42:13.027Z","offsetSec":42458.799,"input":52447,"output":4149,"reasoning":2773,"total":56596,"tools":{"bash":1}},{"ts":"2026-11-22T09:45:34.510Z","offsetSec":42660.282,"input":56700,"output":4149,"reasoning":2773,"total":60849,"tools":{"bash":1}},{"ts":"2026-11-22T09:49:01.148Z","offsetSec":42866.92,"input":60953,"output":4149,"reasoning":2773,"total":65102,"tools":{"bash":1}},{"ts":"2026-11-22T09:52:32.942Z","offsetSec":43078.714,"input":65206,"output":4149,"reasoning":2773,"total":69355,"tools":{"bash":1}},{"ts":"2026-11-22T09:56:09.007Z","offsetSec":43294.779,"input":69459,"output":4149,"reasoning":2773,"total":73608,"tools":{"bash":1}},{"ts":"2026-11-22T09:59:07.610Z","offsetSec":43473.382,"input":73712,"output":3132,"reasoning":2773,"total":76844,"tools":{"bash":1}},{"ts":"2026-11-22T10:01:52.198Z","offsetSec":43637.97,"input":77059,"output":2973,"reasoning":2773,"total":80032,"tools":{"bash":1}},{"ts":"2026-11-22T10:04:08.708Z","offsetSec":43774.48,"input":80201,"output":2311,"reasoning":1463,"total":82512,"tools":{"bash":1}},{"ts":"2026-11-22T10:05:39.111Z","offsetSec":43864.883,"input":82626,"output":1421,"reasoning":1097,"total":84047,"tools":{"bash":1}},{"ts":"2026-11-22T10:13:24.233Z","offsetSec":44330.005,"input":84068,"output":10339,"reasoning":2183,"total":94407,"tools":{"write":1}},{"ts":"2026-11-22T10:18:09.340Z","offsetSec":44615.112,"input":94448,"output":3179,"reasoning":2776,"total":97627,"tools":{"bash":1}},{"ts":"2026-11-22T10:21:20.790Z","offsetSec":44806.562,"input":97792,"output":3179,"reasoning":2776,"total":100971,"tools":{"bash":1}},{"ts":"2026-11-22T10:24:35.071Z","offsetSec":45000.843,"input":101136,"output":3175,"reasoning":2773,"total":104311,"tools":{"bash":1}},{"ts":"2026-11-22T10:27:53.176Z","offsetSec":45198.948,"input":104476,"output":3175,"reasoning":2773,"total":107651,"tools":{"bash":1}},{"ts":"2026-11-22T10:31:14.440Z","offsetSec":45400.212,"input":107816,"output":3175,"reasoning":2773,"total":110991,"tools":{"bash":1}},{"ts":"2026-11-22T10:34:39.007Z","offsetSec":45604.779,"input":111156,"output":3175,"reasoning":2773,"total":114331,"tools":{"bash":1}},{"ts":"2026-11-22T10:50:43.039Z","offsetSec":46568.811,"input":39986,"output":10353,"reasoning":2183,"total":50339,"tools":{"write":1}},{"ts":"2026-11-22T10:55:31.477Z","offsetSec":46857.249,"input":50435,"output":2720,"reasoning":2349,"total":53155,"tools":{"bash":1}},{"ts":"2026-11-22T10:57:55.780Z","offsetSec":47001.552,"input":53413,"output":3047,"reasoning":2776,"total":56460,"tools":{"bash":1}},{"ts":"2026-11-22T11:00:29.091Z","offsetSec":47154.863,"input":56847,"output":3047,"reasoning":2776,"total":59894,"tools":{"bash":1}},{"ts":"2026-11-22T11:03:05.342Z","offsetSec":47311.114,"input":60281,"output":3043,"reasoning":2773,"total":63324,"tools":{"bash":1}},{"ts":"2026-11-22T11:05:51.927Z","offsetSec":47477.699,"input":63711,"output":3043,"reasoning":2773,"total":66754,"tools":{"bash":1}},{"ts":"2026-11-22T11:07:12.178Z","offsetSec":47557.95,"input":67153,"output":864,"reasoning":557,"total":68017,"tools":{"bash":1}},{"ts":"2026-11-22T11:09:44.328Z","offsetSec":47710.1,"input":69072,"output":3043,"reasoning":2773,"total":72115,"tools":{"bash":1}},{"ts":"2026-11-22T11:12:33.419Z","offsetSec":47879.191,"input":72502,"output":3043,"reasoning":2773,"total":75545,"tools":{"bash":1}},{"ts":"2026-11-22T11:13:45.733Z","offsetSec":47951.505,"input":75958,"output":660,"reasoning":192,"total":76618,"tools":{"bash":1}},{"ts":"2026-11-22T11:16:07.770Z","offsetSec":48093.542,"input":77074,"output":3047,"reasoning":2776,"total":80121,"tools":{"bash":1}},{"ts":"2026-11-22T11:19:03.451Z","offsetSec":48269.223,"input":80508,"output":3245,"reasoning":192,"total":83753,"tools":{"bash":1}},{"ts":"2026-11-22T11:20:23.359Z","offsetSec":48349.131,"input":84137,"output":660,"reasoning":192,"total":84797,"tools":{"bash":1}},{"ts":"2026-11-22T11:22:17.262Z","offsetSec":48463.034,"input":85253,"output":2373,"reasoning":1993,"total":87626,"tools":{"bash":1}},{"ts":"2026-11-22T11:25:26.029Z","offsetSec":48651.801,"input":87638,"output":3777,"reasoning":1993,"total":91415,"tools":{"bash":1}}],"peakTurn":{"offsetSec":40965.618,"total":115717},"avgInputPerTurn":72570.38888888889,"avgOutputPerTurn":3525.7820512820513};
+
+const fmt = n => Math.round(n).toLocaleString('en-US');
+const compact = n => {
+  if (n >= 1e6) return (n/1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
+  return String(Math.round(n));
+};
+const fmtMin = m => { const h = Math.floor(m/60), mm = Math.round(m%60); return h > 0 ? `${h}h ${mm}m` : `${mm}m`; };
+const fmtOffset = s => { const h = Math.floor(s/3600), m = Math.round((s%3600)/60); return h > 0 ? `t+${h}h ${m}m` : `t+${m}m`; };
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function niceStep(raw) {
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const n = raw / p;
+  const m = n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10;
+  return m * p;
+}
+function niceTicks(max, count) {
+  const step = niceStep(max / count);
+  const top = Math.ceil(max / step) * step;
+  const ticks = [];
+  for (let v = 0; v <= top + 1e-9; v += step) ticks.push(v);
+  return { ticks, top };
+}
+function countUp(el, target, dur, format) {
+  const t0 = performance.now();
+  function frame(t) {
+    const p = Math.min(1, (t - t0) / dur);
+    const e = 1 - Math.pow(1 - p, 3);
+    el.textContent = format(target * e);
+    if (p < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+function timeLabelStep(binsLen, maxLabels) {
+  const k = Math.ceil(binsLen / maxLabels);
+  return k;
+}
+
+// ---------- hero stats ----------
+const totalTokens = DATA.totals.total;
+const spanMin = DATA.spanMin;
+const turnsCount = DATA.turns;
+const toolTotal = Object.values(DATA.toolCalls).reduce((a, b) => a + b, 0);
+document.getElementById('captured').textContent = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+countUp(document.getElementById('v-total'), totalTokens, 1200, v => fmt(v));
+const spanH = Math.floor(spanMin / 60), spanM = Math.round(spanMin % 60);
+countUp(document.getElementById('v-span'), spanMin, 1200, v => `${Math.round(v)} min`);
+document.getElementById('v-span-sub').textContent = `≈ ${spanH}h ${String(spanM).padStart(2, '0')}m wall clock · first→last event`;
+countUp(document.getElementById('v-turns'), turnsCount, 1000, v => fmt(v));
+countUp(document.getElementById('v-tools'), toolTotal, 1000, v => fmt(v));
+const tcParts = Object.entries(DATA.toolCalls).map(([k, v]) => `${k} ${v}`).join(' · ');
+document.getElementById('v-tools-sub').textContent = tcParts;
+document.getElementById('m-in').textContent = compact(DATA.avgInputPerTurn);
+document.getElementById('m-out').textContent = compact(DATA.avgOutputPerTurn);
+document.getElementById('m-peak').textContent = `${compact(DATA.peakTurn.total)} @ ${fmtOffset(DATA.peakTurn.offsetSec)}`;
+const ratio = DATA.totals.input / Math.max(1, DATA.totals.output);
+document.getElementById('m-ratio').textContent = `≈ ${ratio.toFixed(1)} : 1`;
+
+// ---------- composition rows ----------
+const compRows = [
+  { name: 'Input', value: DATA.totals.input, color: 'var(--amber)' },
+  { name: 'Output', value: DATA.totals.output, color: 'var(--cyan)' },
+  { name: 'Reasoning', value: DATA.totals.reasoning, color: 'var(--purple)' },
+];
+const compMax = Math.max(...compRows.map(r => r.value));
+document.getElementById('compositionRows').innerHTML = compRows.map(r => {
+  const pct = (r.value / totalTokens * 100).toFixed(1);
+  return `<div class="row">
+    <span class="name">${esc(r.name)}</span>
+    <span class="bar-track"><span class="bar-fill" style="width:0%; background:${r.color}" data-w="${(r.value / compMax * 100).toFixed(2)}"></span></span>
+    <span class="num">${fmt(r.value)}<span class="pct">${pct}% of total</span></span>
+  </div>`;
+}).join('');
+requestAnimationFrame(() => requestAnimationFrame(() => {
+  document.querySelectorAll('#compositionRows .bar-fill').forEach(el => el.style.width = el.dataset.w + '%');
+}));
+
+// ---------- tool call rows ----------
+const toolColors = { bash: 'var(--amber)', write: 'var(--cyan)', read: 'var(--green)' };
+const toolEntries = Object.entries(DATA.toolCalls).sort((a, b) => b[1] - a[1]);
+const toolMax = Math.max(...toolEntries.map(e => e[1]));
+document.getElementById('toolRows').innerHTML = toolEntries.map(([k, v]) => {
+  const color = toolColors[k] || 'var(--muted)';
+  return `<div class="row">
+    <span class="name">${esc(k)}</span>
+    <span class="bar-track"><span class="bar-fill" style="width:0%; background:${color}" data-w="${(v / toolMax * 100).toFixed(2)}"></span></span>
+    <span class="num">${fmt(v)}<span class="pct">${(v / toolTotal * 100).toFixed(1)}% of calls</span></span>
+  </div>`;
+}).join('');
+requestAnimationFrame(() => requestAnimationFrame(() => {
+  document.querySelectorAll('#toolRows .bar-fill').forEach(el => el.style.width = el.dataset.w + '%');
+}));
+
+// ---------- area chart (input tokens / min, 5-min bins) ----------
+function buildAreaChart() {
+  const svg = document.getElementById('areaChart');
+  const W = 1000, H = 340, L = 74, R = 18, T = 24, B = 44;
+  const innerW = W - L - R, innerH = H - T - B;
+  const bins = DATA.bins5;
+  const maxV = Math.max(...bins.map(b => b.input), 1);
+  const { ticks, top } = niceTicks(maxV, 4);
+  const x = i => L + (i + 0.5) / bins.length * innerW;
+  const y = v => T + innerH - (v / top) * innerH;
+  let s = '';
+  // gridlines + y labels
+  for (const t of ticks) {
+    const gy = y(t);
+    s += `<line x1="${L}" y1="${gy.toFixed(1)}" x2="${W - R}" y2="${gy.toFixed(1)}" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>`;
+    s += `<text x="${L - 10}" y="${(gy + 4).toFixed(1)}" text-anchor="end" font-size="12" fill="#93a1b5">${compact(t)}</text>`;
+  }
+  // area path + line
+  const pts = bins.map((b, i) => [x(i), y(b.input)]);
+  let dPath = `M ${pts[0][0].toFixed(1)} ${y(0).toFixed(1)}`;
+  for (const [px, py] of pts) dPath += ` L ${px.toFixed(1)} ${py.toFixed(1)}`;
+  dPath += ` L ${pts[pts.length - 1][0].toFixed(1)} ${y(0).toFixed(1)} Z`;
+  s += `<path d="${dPath}" fill="rgba(255,180,84,0.16)" stroke="none"/>`;
+  let line = '';
+  pts.forEach(([px, py], i) => { line += (i === 0 ? 'M' : ' L') + ` ${px.toFixed(1)} ${py.toFixed(1)}`; });
+  s += `<path d="${line}" fill="none" stroke="#ffb454" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  // time axis labels (every k bins)
+  const step = timeLabelStep(bins.length, 9);
+  for (let i = 0; i < bins.length; i += step) {
+    const m = Math.round(i * 5);
+    s += `<text x="${x(i).toFixed(1)}" y="${H - 14}" text-anchor="middle" font-size="11.5" fill="#93a1b5">${fmtMin(m)}</text>`;
+  }
+  // hover targets: invisible rects per bin with <title>
+  const bw = innerW / bins.length;
+  for (let i = 0; i < bins.length; i++) {
+    s += `<rect x="${(L + i * bw).toFixed(1)}" y="${T}" width="${Math.max(2, bw - 1).toFixed(1)}" height="${innerH}" fill="transparent"><title>${fmtMin(i * 5)} · ${compact(bins[i].input)} input tokens (${bins[i].turns} turns)</title></rect>`;
+  }
+  svg.innerHTML = s;
+}
+buildAreaChart();
+
+// ---------- turns strip ----------
+function buildTurnsStrip() {
+  const svg = document.getElementById('turnsStrip');
+  const W = 1000, H = 190, L = 6, R = 6, T = 16, B = 26;
+  const innerW = W - L - R, innerH = H - T - B;
+  const turns = DATA.turnList;
+  const maxV = Math.max(...turns.map(t => t.total), 1);
+  const peakIdx = turns.findIndex(t => t.offsetSec === DATA.peakTurn.offsetSec && t.total === DATA.peakTurn.total);
+  let s = '';
+  // baseline
+  s += `<line x1="${L}" y1="${(T + innerH).toFixed(1)}" x2="${W - R}" y2="${(T + innerH).toFixed(1)}" stroke="rgba(255,255,255,0.14)" stroke-width="1"/>`;
+  const n = turns.length;
+  const slot = innerW / n;
+  const barW = Math.max(2, slot * 0.58);
+  for (let i = 0; i < n; i++) {
+    const t = turns[i];
+    const h = Math.max(1.5, (t.total / maxV) * innerH);
+    const bx = L + slot * (i + 0.5) - barW / 2;
+    const by = T + innerH - h;
+    const isPeak = i === peakIdx;
+    const toolsStr = Object.entries(t.tools || {}).map(([k, v]) => `${k}×${v}`).join(' ') || 'no tool calls';
+    s += `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="${isPeak ? '#ffb454' : '#7f9cc4'}" opacity="${isPeak ? 1 : 0.85}"><title>Turn ${i + 1} · ${fmtOffset(t.offsetSec)} · in ${compact(t.input)} / out ${compact(t.output)} (reasoning ${compact(t.reasoning)}) · total ${compact(t.total)} · ${esc(toolsStr)}</title></rect>`;
+  }
+  // time axis labels: first / middle / last offsets
+  const marks = [0, Math.floor(n / 2), n - 1];
+  for (const i of marks) {
+    const t = turns[i];
+    s += `<text x="${(L + slot * (i + 0.5)).toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="11" fill="#93a1b5">${fmtOffset(t.offsetSec)}</text>`;
+  }
+  svg.innerHTML = s;
+  document.getElementById('turnsNote').textContent = `Bars are evenly spaced in chronological order (not positioned by wall clock) — ${n} turns, first at ${fmtOffset(turns[0].offsetSec)}, last at ${fmtOffset(turns[n - 1].offsetSec)}. Peak turn: ${compact(DATA.peakTurn.total)} tokens (${fmtOffset(DATA.peakTurn.offsetSec)}).`;
+}
+buildTurnsStrip();
+
+// ---------- footer meta ----------
+document.getElementById('footMeta').textContent = `span ${Math.round(spanMin)} min · peak turn t+${fmtOffset(DATA.peakTurn.offsetSec).replace('t+','')}`;
+</script>
+</body>
+</html>
